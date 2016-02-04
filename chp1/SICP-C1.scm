@@ -29,23 +29,23 @@
         (else (expt-iter (- n 1) b (* a b)))))
 
 ;exercise 1.17&1.18
-(define (halv b) (/ b 2))
-(define (double a) (* a 2))
+;(define (halv b) (/ b 2))
+;(define (double a) (* a 2))
 ;;;recursive version
-(define (re* a b)
-  (cond ((= b 0) 0)
-        ((= b 1) a) 
-        ((even? b) (re* (double a) (halv b)))
-        (else (+ a (re* a (- b 1))))))
+;(define (re* a b)
+;  (cond ((= b 0) 0)
+;        ((= b 1) a) 
+;        ((even? b) (re* (double a) (halv b)))
+;        (else (+ a (re* a (- b 1))))))
 ;;;iterative version
-(define (it* a b)
-  (if (= b 0)
-      0
-      (it*-iter a b 0)))
-(define (it*-iter a b sum)
-  (cond ((= b 1) (+ a sum))
-        ((even? b) (it*-iter (double a) (halv b) sum))
-        (else (it*-iter a (- b 1) (+ sum a)))))
+;(define (it* a b)
+;  (if (= b 0)
+;      0
+;      (it*-iter a b 0)))
+;(define (it*-iter a b sum)
+;  (cond ((= b 1) (+ a sum))
+;        ((even? b) (it*-iter (double a) (halv b) sum))
+;        (else (it*-iter a (- b 1) (+ sum a)))))
 
 ;exercise 1.19
 (define (fib n)
@@ -249,8 +249,91 @@
 ;1.39 use cont-frac to compute tangent
 (define (tan-cf x k)
   (cont-frac (lambda (i)
-                  (if (= i 1)
-                      x
-                      (- 0 (square x))))
-                (lambda (i) (- (* 2.0 i) 1.0))
-                k))
+               (if (= i 1)
+                   x
+                   (- 0 (square x))))
+             (lambda (i) (- (* 2.0 i) 1.0))
+             k))
+
+;1.40
+(define (cubic a b c)
+  (lambda (i)
+    (+ (* i i i) (* a i i) (* b i ) (* c ))))
+
+(define (newton-transform g)
+  (lambda (x)
+    (- x (/ (g x) ((deriv g) x)))))
+(define (newtons-method g guess)
+  (fixed-point (newton-transform g) guess))
+(define (deriv g)
+  (lambda (x)
+    (/ (- (g (+ x dx)) (g x))
+       dx)))
+(define dx 0.00001)
+;(newtons-method (cubic a b c) 1)
+
+;1.41
+(define (double f)
+  (lambda (i) (f (f i))))
+
+; interesting: following equals (((double (double double)) inc) 5)
+;((((lambda (i)
+;   (double (double i)))
+; double) inc)
+; 5)
+
+;1.42
+(define (composition f g)
+  (lambda (i) (f (g i))))
+
+; 1.43
+(define (repeated f times)
+  (lambda (i)
+    (if (<= times 0)
+        i
+        ((composition f (repeated f (- times 1))) i))))
+
+; 1.44
+(define (smooth f)
+  (define dx 0.00001)
+  (lambda (i)
+    (/ (+ (f i) (f (- i dx)) (f (+ i dx))) 3)))
+;n-th fold smoothed function
+(define (n-fold-smoothed f n)
+  (lambda (i)
+    (((repeated smooth n) f) i)))
+
+; 1.45
+(define (average x y) (/ (+ x y) 2))
+(define (average-damp f)
+  (lambda (x) (average x (f x))))
+
+(define (n-th-root i n)
+  (fixed-point
+   ((lambda (x)
+      ((repeated average-damp (/ (log n) (log 2)))
+       (lambda (y) (/ x (fast-expt y (- n 1))))))
+    i) 1.0))
+
+;1.46
+(define (iterative-improve good-enough? improve)
+  (define (iter guess)
+    (let ((next (improve guess)))
+      (if (good-enough? guess next)
+          guess
+          (iter next))))
+  (lambda (first-guess)
+    (iter first-guess)))
+
+(define (new-sqrt n)
+  ((iterative-improve
+    (lambda (v1 v2)
+      (< (abs (- v1 v2)) 0.00001))
+    (lambda (guess)
+      (average guess (/ n guess)))) 1.0))
+
+(define (new-fixed-point f first-guess)
+  ((iterative-improve
+    (lambda (v1 v2)
+      (< (abs (- v1 v2)) 0.00001))
+    f) first-guess))
